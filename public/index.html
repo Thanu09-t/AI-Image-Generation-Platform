@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dreamframe: AI image studio</title>
+  <meta name="description" content="Dreamframe turns text prompts into images. Pick a style and a size, generate, and keep everything in a local gallery." />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d1803f'/%3E%3C/svg%3E" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="brand-icon" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="m14.31 8 5.74 9.94" />
+        <path d="M9.69 8h11.48" />
+        <path d="m7.38 12 5.74-9.94" />
+        <path d="M9.69 16 3.95 6.06" />
+        <path d="M14.31 16H2.83" />
+        <path d="m16.62 12-5.74 9.94" />
+      </svg>
+      <span class="brand-name">Dreamframe</span>
+    </div>
+    <p class="status" id="provider-badge">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span id="provider-badge-text">Checking engines</span>
+    </p>
+  </header>
+
+  <div class="layout">
+    <!-- ============ Controls ============ -->
+    <aside class="controls" aria-label="Generation controls">
+      <div class="control-group">
+        <label class="label" for="prompt">Prompt</label>
+        <textarea id="prompt" rows="5" maxlength="2000"
+          placeholder="A lighthouse on a rocky cliff at dusk, migrating birds crossing the sky"></textarea>
+        <div class="prompt-tools">
+          <p class="field-note"><span id="char-count">0</span> of 2000 characters</p>
+          <button type="button" class="link-btn" id="example">Use an example prompt</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <span class="label" id="style-label">Style</span>
+        <div class="chips" id="style-chips" role="group" aria-labelledby="style-label">
+          <button type="button" class="chip is-active" data-style="" data-label="None">None</button>
+          <button type="button" class="chip" data-style="photorealistic, ultra detailed, 35mm photo, natural lighting" data-label="Photoreal">Photoreal</button>
+          <button type="button" class="chip" data-style="digital illustration, concept art, artstation trending" data-label="Illustration">Illustration</button>
+          <button type="button" class="chip" data-style="anime style, cel shading, vibrant colors, studio quality" data-label="Anime">Anime</button>
+          <button type="button" class="chip" data-style="3d render, octane render, soft studio lighting" data-label="3D render">3D render</button>
+          <button type="button" class="chip" data-style="watercolor painting, soft washes, textured paper" data-label="Watercolor">Watercolor</button>
+          <button type="button" class="chip" data-style="cyberpunk, neon lights, rain-slick streets, high contrast" data-label="Cyberpunk">Cyberpunk</button>
+          <button type="button" class="chip" data-style="vintage film photograph, kodak portra grain, faded tones" data-label="Film">Film</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <span class="label" id="aspect-label">Aspect ratio</span>
+        <div class="segmented" id="aspect-group" role="group" aria-labelledby="aspect-label">
+          <button type="button" class="seg is-active" data-ratio="1:1">1:1</button>
+          <button type="button" class="seg" data-ratio="4:5">4:5</button>
+          <button type="button" class="seg" data-ratio="3:2">3:2</button>
+          <button type="button" class="seg" data-ratio="16:9">16:9</button>
+          <button type="button" class="seg" data-ratio="9:16">9:16</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label class="label" for="provider">Engine</label>
+        <select id="provider" aria-describedby="provider-note"></select>
+        <p class="field-note" id="provider-note">Requests run through the platform server, so the browser never holds a key.</p>
+      </div>
+
+      <div class="control-group">
+        <label class="label" for="model">Model</label>
+        <select id="model"></select>
+      </div>
+
+      <div class="control-group">
+        <label class="label" for="seed">Seed</label>
+        <div class="seed-row">
+          <input id="seed" type="text" inputmode="numeric" placeholder="random" autocomplete="off" />
+          <button type="button" class="icon-btn" id="seed-roll" title="Pick a random seed" aria-label="Pick a random seed">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M16 3h5v5" />
+              <path d="M4 20 21 3" />
+              <path d="M21 16v5h-5" />
+              <path d="m15 15 6 6" />
+              <path d="m4 4 5 5" />
+            </svg>
+          </button>
+        </div>
+        <p class="field-note">The same prompt and seed reproduce the same image. Leave it empty for a random seed.</p>
+      </div>
+
+      <button type="button" class="btn-primary" id="generate">Generate</button>
+      <p class="field-note" id="quota-note">Free tier allows one image at a time per address, so a second request waits a few seconds.</p>
+    </aside>
+
+    <!-- ============ Workspace ============ -->
+    <main class="workspace">
+      <section class="viewer" id="viewer" aria-live="polite">
+        <!-- empty state -->
+        <div class="viewer-empty" id="viewer-empty">
+          <svg class="empty-icon" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+          </svg>
+          <h1>Generate images from text</h1>
+          <p>Write a prompt, choose a style and a size, then press Generate. Each result is saved to the gallery below.</p>
+        </div>
+
+        <!-- loading state -->
+        <div class="viewer-loading" id="viewer-loading" hidden>
+          <div class="loading-stage">
+            <p class="loading-line">
+              <span class="spinner" aria-hidden="true"></span>
+              <span id="loading-text">Generating, 0s</span>
+            </p>
+            <p class="field-note" id="loading-note"></p>
+          </div>
+          <div class="loading-actions">
+            <button type="button" class="btn-ghost" id="cancel">Cancel</button>
+          </div>
+        </div>
+
+        <!-- error state -->
+        <div class="viewer-error" id="viewer-error" hidden>
+          <svg class="error-icon" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </svg>
+          <h2>Generation failed</h2>
+          <p id="error-text"></p>
+          <button type="button" class="btn-primary" id="retry">Try again</button>
+        </div>
+
+        <!-- result state -->
+        <div class="viewer-result" id="viewer-result" hidden>
+          <div class="frame">
+            <img id="result-img" alt="Generated image" />
+          </div>
+          <div class="result-bar">
+            <p class="result-prompt" id="result-prompt"></p>
+            <div class="result-meta" id="result-meta"></div>
+            <div class="result-actions">
+              <button type="button" class="btn-ghost" id="act-variation">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+                  <path d="M21 3v5h-5" />
+                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+                  <path d="M8 16H3v5" />
+                </svg>
+                Variation
+              </button>
+              <button type="button" class="btn-ghost" id="act-copy">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+                  <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+                </svg>
+                Copy prompt
+              </button>
+              <a class="btn-primary" id="act-download" download>
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" x2="12" y1="15" y2="3" />
+                </svg>
+                Download
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="gallery">
+        <div class="gallery-head">
+          <h2>Gallery <span class="count" id="gallery-count">0</span></h2>
+          <div class="tabs" role="tablist" aria-label="Gallery filter">
+            <button type="button" class="tab is-active" data-filter="all" role="tab" aria-selected="true">All</button>
+            <button type="button" class="tab" data-filter="favorites" role="tab" aria-selected="false">Favorites</button>
+          </div>
+        </div>
+        <div class="grid" id="gallery-grid"></div>
+        <div class="gallery-empty" id="gallery-empty">
+          <p>Images you generate are saved here in this browser.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

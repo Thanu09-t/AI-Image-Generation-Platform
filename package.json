@@ -1,0 +1,14 @@
+{
+  "name": "dreamframe",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dreamframe — AI image generation studio (text-to-image platform)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "start": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^4.20.0"
+  }
+}

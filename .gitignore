@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+dist/
+*.log
+/freebuff-sites-build/
+.gemini-api-key
